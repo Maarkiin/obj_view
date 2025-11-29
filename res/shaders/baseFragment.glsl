@@ -1,9 +1,11 @@
 #version 330 core
-out vec4 FragColor;
-  
-in vec4 vertexColor; // the input variable from the vertex shader (same name and same type)  
+#define PI 3.14159265359
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_time;
 
-void main()
-{
-    FragColor = vertexColor;
-} 
+
+void main() {
+    float x = abs(sin(u_time));
+    gl_FragColor = vec4( x, x, x, 1.0f );
+}

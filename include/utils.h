@@ -1,5 +1,5 @@
-#ifndef utilsH
-#define utilsH
+#ifndef UTILS_H
+#define UTILS_H
 
 #define UNUSED __attribute__((unused))
 

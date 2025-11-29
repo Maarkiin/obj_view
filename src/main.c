@@ -1,7 +1,11 @@
 #include "include.h"
 #include "ZGL.h"
+#include "shader.h"
 
-void framebuffer_size_callback(ZGLwindow* window, int width, int height)
+unsigned int wireframeMode = 1;
+double lastKeyPressTime = 0.0;
+
+void framebuffer_size_callback(ZGLwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
@@ -12,102 +16,74 @@ void clear()
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void processInput(ZGLwindow* window)
+void processInput(ZGLwindow *window)
 {
-    if(ZGLgetKey(window, VK_ESCAPE) == ZGL_PRESSED)
-    {
+    if (ZGLgetKey(window, VK_ESCAPE) == ZGL_PRESSED)
         ZGLsetWindowShouldClose(window, TRUE);
+    if (ZGLgetKey(window, VK_F1) == ZGL_PRESSED)
+    {
+        double currentTime = ZGLgetTime();
+        if (currentTime - lastKeyPressTime > 0.2) // Minimum delay of 0.2 seconds
+        {
+            if (wireframeMode == 0)
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Enable wireframe mode
+                wireframeMode++;
+            }
+            else if (wireframeMode == 1)
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Disable wireframe mode
+                wireframeMode++;
+            }
+            else if (wireframeMode == 2)
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // point
+                wireframeMode = 0;
+            }
+
+            lastKeyPressTime = currentTime;
+        }
     }
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     ZGLinit();
-    ZGLwindow* window = ZGLcreateWindow(800, 600, "openGL3.3 ZGL Window");
+    ZGLwindow *window = ZGLcreateWindow(800, 600, "openGL3.3 ZGL Window");
     if (window == NULL)
     {
         MessageBox(NULL, "Failed to create window", "Error!", MB_ICONEXCLAMATION | MB_OK);
         return 1;
     }
     ZGLmakeContextCurrent(window);
-    if (!gladLoadGL()) {
+    if (!gladLoadGL())
+    {
         MessageBox(NULL, "Failed to initialize GLAD", "Error!", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
 
     ZGLsetFramebufferSizeCallback(window, framebuffer_size_callback);
     glViewport(0, 0, 800, 600);
-    
-    //////////////////////////////////////////////////////////////////////////////
-    const char *vertexShaderSource = "#version 330 core\n"
-        "layout (location = 0) in vec3 aPos;\n"
-        "void main()\n"
-        "{\n"
-        "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-        "}\0";
-    const char *fragmentShaderSource = "#version 330 core\n"
-        "out vec4 FragColor;\n"
-        "void main()\n"
-        "{\n"
-        "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-        "}\n\0";
-    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    // check for shader compile errors
-    int success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        MessageBox(NULL, "Vertex Shader Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-        //std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    // fragment shader
-    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    // check for shader compile errors
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        MessageBox(NULL, "fragment Shader Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-        //std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    // link shaders
-    unsigned int shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    // check for linking errors
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        MessageBox(NULL, "Shader Program Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-        //std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    float vertices[] = {
-         0.5f,  0.5f, 0.0f,  // top right
-         0.5f, -0.5f, 0.0f,  // bottom right
-        -0.5f, -0.5f, 0.0f,  // bottom left
-        -0.5f,  0.5f, 0.0f   // top left 
-    };
-    unsigned int indices[] = {  // note that we start from 0!
-        0, 1, 3,  // first Triangle
-        1, 2, 3   // second Triangle
-    };
-    unsigned int VBO, VAO, EBO;
+    // create shader program
+    GLuint shaderProgram = createShader("res/shaders/baseVertex.glsl", "res/shaders/baseFragment.glsl");
+
+    // int numTris = 2;
+    float vertices[] =
+        {
+            -1.0f, -1.0f, 0.0f,
+            -1.0f, 1.0f, 0.0f,
+            1.0f, -1.0f, 0.0f,
+            1.0f, 1.0f, 0.0f};
+    unsigned int indices[] =
+        {
+            0, 1, 2,
+            2, 1, 3};
+
+    GLuint VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -116,44 +92,41 @@ int main(int argc, char** argv)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-    glBindBuffer(GL_ARRAY_BUFFER, 0); 
+    // unbind VBO -- do not unbind EBO while VAO is active
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    // wire frame mode
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    glBindVertexArray(0); 
-
-
-    // uncomment this call to draw in wireframe polygons.
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    // render loop
-
-    //MessageBox(NULL, "made it to the loop!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-
+    // main loop
     while (!ZGLwindowShouldClose(window))
     {
         processInput(window);
         clear();
-        // draw our first triangle
+        // render here
         glUseProgram(shaderProgram);
-        glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-        //glDrawArrays(GL_TRIANGLES, 0, 6);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        // glBindVertexArray(0); // no need to unbind it every time 
- 
+        glUniform1f(glGetUniformLocation(shaderProgram, "u_time"), ZGLgetTime());
+        int width, height;
+        double m_x, m_y;
+        ZGLgetFramebufferSize(window, &width, &height);
+        ZGLgetCursorPos(window, &m_x, &m_y);
+        glUniform2f(glGetUniformLocation(shaderProgram, "u_resolution"), (float)width, (float)height);
+        // printf( "%d %d\n",(int)m_x, (int)m_y );
+        glUniform2f(glGetUniformLocation(shaderProgram, "u_mouse"), (float)m_x, (float)m_y);
+
+        glBindVertexArray(VAO);
+        // glDrawArrays( GL_TRIANGLES, 0, 6 );
+        int numTris = sizeof(indices) / sizeof(int) / 3;
+        glDrawElements(GL_TRIANGLES, numTris * 3, GL_UNSIGNED_INT, 0); // numTris*3 -> 3 edges in a triangle
+
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         ZGLswapBuffers(window);
         ZGLpollEvents();
     }
-
 
     ZGLterminate(window);
     return 0;

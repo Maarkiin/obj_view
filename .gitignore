@@ -2,7 +2,7 @@
 *.d
 
 # VS code
-*.vscode
+.vscode
 
 # Object files
 *.o
